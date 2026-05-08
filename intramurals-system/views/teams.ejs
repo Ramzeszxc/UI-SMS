@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Manage Teams</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <h1 class="mb-4">⚙️ Manage Teams & Athletes</h1>
+        <nav class="mb-4">
+            <a href="/" class="btn btn-outline-primary">Back to Dashboard</a>
+            <a href="/equipment" class="btn btn-outline-primary">Manage Equipment</a>
+        </nav>
+
+        <div class="row">
+            <!-- CREATE TEAM FORM -->
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">Register New Team</div>
+                    <div class="card-body">
+                        <form action="/teams/add" method="POST">
+                            <input type="text" name="teamId" class="form-control mb-2" placeholder="Team ID (e.g., 101)" required>
+                            <input type="text" name="name" class="form-control mb-2" placeholder="Team Name" required>
+                            <input type="text" name="captain" class="form-control mb-3" placeholder="Captain's Name" required>
+                            <button type="submit" class="btn btn-success w-100">Register Team</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEARCH & READ TEAMS -->
+            <div class="col-md-8">
+                <!-- Search Bar -->
+                <form action="/teams" method="GET" class="d-flex mb-3">
+                    <input type="text" name="search" class="form-control me-2" placeholder="Search by Team ID...">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                    <a href="/teams" class="btn btn-secondary ms-2">Clear</a>
+                </form>
+
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <table class="table">
+                            <thead><tr><th>ID</th><th>Name</th><th>Captain</th><th>Status</th><th>QR Pass</th><th>Action</th></tr></thead>
+                            <tbody>
+                                <% teams.forEach(team => { %>
+                                    <tr>
+                                        <td><%= team.id %></td>
+                                        <td><%= team.name %></td>
+                                        <td><%= team.captain %></td>
+                                        <td><span class="badge bg-success"><%= team.status %></span></td>
+                                        <!-- BONUS: QR CODE INTEGRATION -->
+                                        <td>
+                                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=StudentTeam-<%= team.id %>" alt="QR">
+                                        </td>
+                                        <td>
+                                            <form action="/teams/delete" method="POST">
+                                                <input type="hidden" name="teamId" value="<%= team.id %>">
+                                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
