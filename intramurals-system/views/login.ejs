@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Intramurals Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
+    <div class="card shadow-sm p-4" style="width: 400px;">
+        <h2 class="text-center mb-4">⚽ Login Portal</h2>
+        
+        <% if (error) { %>
+            <div class="alert alert-warning text-center"><%= error %></div>
+        <% } %>
+
+        <form action="/login" method="POST" class="mb-3">
+            <input type="text" name="username" class="form-control mb-2" placeholder="Username" required>
+            <input type="password" name="password" class="form-control mb-3" placeholder="Password" required>
+            <button type="submit" class="btn btn-primary w-100">Login</button>
+        </form>
+
+        <hr>
+        <p class="text-center mb-1 text-muted"><small>Are you a new student?</small></p>
+        <form action="/register" method="POST">
+            <div class="input-group">
+                <input type="text" name="username" class="form-control form-control-sm" placeholder="New Username" required>
+                <input type="password" name="password" class="form-control form-control-sm" placeholder="New Password" required>
+                <button type="submit" class="btn btn-sm btn-outline-success">Register</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
