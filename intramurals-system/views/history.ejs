@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Archived Logs</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-4">
+        <h1 class="mb-4">🗄️ Archived Loan History</h1>
+        <a href="/equipment" class="btn btn-outline-primary mb-4">Back to Active Equipment</a>
+        
+        <div class="card shadow-sm table-responsive">
+            <table class="table align-middle m-0">
+                <thead class="table-dark"><tr><th>Borrower</th><th>Item</th><th>Qty</th><th>Borrowed On</th><th>Returned On</th></tr></thead>
+                <tbody>
+                    <% history.forEach(log => { %>
+                        <tr>
+                            <td><%= log.borrower %></td>
+                            <td><%= log.item.replace('_', ' ') %></td>
+                            <td><%= log.quantity %></td>
+                            <td><small class="text-muted"><%= log.date %></small></td>
+                            <td><span class="badge bg-secondary"><%= log.returnDate %></span></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

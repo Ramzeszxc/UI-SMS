@@ -4,26 +4,48 @@
     <title>Intramurals Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-light">
-    <div class="container mt-5">
-        <h1 class="mb-4">🏆 Futsal Tournament Dashboard</h1>
-        <nav class="mb-4">
-            <a href="/" class="btn btn-primary">Dashboard</a>
-            <a href="/teams" class="btn btn-outline-primary">Manage Teams</a>
-            <a href="/equipment" class="btn btn-outline-primary">Manage Equipment</a>
-            <a href="/logout" class="btn btn-danger float-end ms-2">Logout</a>
-            <a href="/backup" class="btn btn-warning float-end">📥 Download JSON Backup</a>
-        </nav>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>🏆 Manager Dashboard</h1>
+            <div>
+                <a href="/teams" class="btn btn-outline-primary">Teams</a>
+                <a href="/equipment" class="btn btn-outline-primary">Equipment</a>
+                <a href="/backup" class="btn btn-warning">📥 Backup</a>
+                <a href="/logout" class="btn btn-danger ms-2">Logout</a>
+            </div>
+        </div>
+
+        <!-- NEW: Quick Stats Row -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card bg-primary text-white shadow-sm"><div class="card-body">
+                    <h5>Total Teams</h5><h2><%= stats.totalTeams %></h2>
+                </div></div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-warning text-dark shadow-sm"><div class="card-body">
+                    <h5>Pending Applications</h5><h2><%= stats.pendingApps %></h2>
+                </div></div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-success text-white shadow-sm"><div class="card-body">
+                    <h5>Active Gear Loans</h5><h2><%= stats.activeLoansCount %></h2>
+                </div></div>
+            </div>
+        </div>
 
         <div class="row">
-            <!-- LEADERBOARD -->
             <div class="col-md-8">
-                <div class="card shadow-sm">
+                <div class="card shadow-sm mb-4">
                     <div class="card-header bg-dark text-white">Live Leaderboard</div>
-                    <div class="card-body">
-                        <table class="table">
-                            <thead><tr><th>Rank</th><th>Team Name</th><th>Points</th><th>Action</th></tr></thead>
+                    <!-- NEW: table-responsive -->
+                    <div class="card-body table-responsive">
+                        <table class="table align-middle">
+                            <thead><tr><th>Rank</th><th>Team</th><th>Points</th><th>Action</th></tr></thead>
                             <tbody>
                                 <% leaderboard.forEach((team, index) => { %>
                                     <tr>
@@ -31,10 +53,10 @@
                                         <td><strong><%= team.name %></strong></td>
                                         <td><%= team.score %></td>
                                         <td>
-                                            <form action="/teams/score" method="POST" class="d-inline">
+                                            <form action="/teams/score" method="POST" class="m-0">
                                                 <input type="hidden" name="teamId" value="<%= team.id %>">
                                                 <input type="hidden" name="points" value="3">
-                                                <button type="submit" class="btn btn-sm btn-success">+3 Pts (Win)</button>
+                                                <button type="submit" class="btn btn-sm btn-success">+3 Pts</button>
                                             </form>
                                         </td>
                                     </tr>
@@ -44,24 +66,28 @@
                     </div>
                 </div>
             </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm"><div class="card-body">
+                    <canvas id="equipmentChart"></canvas>
+                </div></div>
+            </div>
+        </div>
     </div>
 
-<script>
-    // We wrap the EJS in quotes or add a fallback to 0
-    const futsalCount = Number("<%= equipment.futsalBalls %>") || 0;
-    const bibsCount = Number("<%= equipment.bibs %>") || 0;
+    <script>
+        // Chart Logic
+        const futsalCount = Number("<%= equipment.futsalBalls %>") || 0;
+        const bibsCount = Number("<%= equipment.bibs %>") || 0;
+        new Chart(document.getElementById('equipmentChart').getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: ['Futsal Balls', 'Bibs'], datasets: [{ data: [futsalCount, bibsCount], backgroundColor: ['#0d6efd', '#ffc107'] }] }
+        });
 
-    const ctx = document.getElementById('equipmentChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Futsal Balls', 'Training Bibs'],
-            datasets: [{
-                data: [futsalCount, bibsCount], // Use the clean variables here
-                backgroundColor: ['#0d6efd', '#ffc107']
-            }]
-        }
-    });
-</script>
+        // SweetAlert Popup Logic
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('error')) Swal.fire({ icon: 'error', title: 'Oops...', text: urlParams.get('error') });
+        if (urlParams.has('success')) Swal.fire({ icon: 'success', title: 'Success!', text: urlParams.get('success'), timer: 2000, showConfirmButton: false });
+        window.history.replaceState({}, document.title, window.location.pathname); // Clean URL
+    </script>
 </body>
 </html>
