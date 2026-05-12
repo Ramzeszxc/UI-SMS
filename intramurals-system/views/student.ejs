@@ -8,12 +8,11 @@
 <body class="bg-light">
     <div class="container mt-5">
         <div class="d-flex justify-content-between mb-4">
-            <h1>Welcome, <%= username %>! 👋</h1>
+            <h1>Welcome, <%= username %>!</h1>
             <a href="/logout" class="btn btn-danger">Logout</a>
         </div>
 
         <div class="row">
-            <!-- Apply / Edit Team -->
             <div class="col-md-4">
                 <% if (!myTeam) { %>
                     <div class="card shadow-sm mb-4">
@@ -52,7 +51,6 @@
                 <% } %>
             </div>
 
-            <!-- Tables (Responsive) -->
             <div class="col-md-8">
                 <div class="card shadow-sm mb-4 table-responsive">
                     <div class="card-header bg-dark text-white">Standings</div>

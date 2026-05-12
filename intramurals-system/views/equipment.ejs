@@ -6,7 +6,7 @@
 </head>
 <body class="bg-light">
     <div class="container mt-5">
-        <h1 class="mb-4">⚽ Sports Equipment Logs</h1>
+        <h1 class="mb-4">Sports Equipment Logs</h1>
         <nav class="mb-4">
             <a href="/manager/dashboard" class="btn btn-outline-primary">Back to Dashboard</a>
             <a href="/teams" class="btn btn-outline-primary">Manage Teams</a>
@@ -15,38 +15,35 @@
         </nav>
 
         <div class="row">
-            <!-- LOG BORROWING FORM -->
             <div class="col-md-4">
                 <div class="card shadow-sm mb-4">
                     <div class="card-header bg-primary text-white">Log Borrowed Gear</div>
                     <div class="card-body">
-<form action="/equipment/borrow" method="POST">
-    <label class="form-label">Select Student Account</label>
-    <!-- THIS IS THE NEW DROPDOWN -->
-    <select name="borrower" class="form-select mb-2" required>
-        <option value="" disabled selected>-- Choose a Registered Student --</option>
-        <% students.forEach(student => { %>
-            <option value="<%= student %>"><%= student %></option>
-        <% }) %>
-    </select>
+                        <form action="/equipment/borrow" method="POST">
+                        <label class="form-label">Select Student Account</label>
+                            <select name="borrower" class="form-select mb-2" required>
+                                <option value="" disabled selected>-- Choose a Registered Student --</option>
+                                <% students.forEach(student => { %>
+                                <option value="<%= student %>"><%= student %></option>
+                                <% }) %>
+                            </select>
     
-    <label class="form-label">Item</label>
-    <select name="item" class="form-select mb-2">
-        <option value="futsal_balls">Futsal Ball</option>
-        <option value="bibs">Training Bibs</option>
-        <option value="cones">Cones</option>
-    </select>
+                        <label class="form-label">Item</label>
+                            <select name="item" class="form-select mb-2">
+                                <option value="futsal_balls">Futsal Ball</option>
+                                <option value="bibs">Training Bibs</option>
+                                <option value="cones">Cones</option>
+                            </select>
 
-    <label class="form-label">Quantity</label>
-    <input type="number" name="quantity" class="form-control mb-3" value="1" min="1" required>
+                        <label class="form-label">Quantity</label>
+                    <input type="number" name="quantity" class="form-control mb-3" value="1" min="1" required>
     
-    <button type="submit" class="btn btn-primary w-100">Confirm Borrowing</button>
-</form>
+            <button type="submit" class="btn btn-primary w-100">Confirm Borrowing</button>
+                        </form>
                     </div>
                 </div>
             </div>
 
-            <!-- ACTIVE LOANS TABLE -->
             <div class="col-md-8">
                 <div class="card shadow-sm">
                     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">

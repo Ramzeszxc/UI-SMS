@@ -6,7 +6,7 @@
 </head>
 <body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
     <div class="card shadow-sm p-4" style="width: 400px;">
-        <h2 class="text-center mb-4">University Intramurals Login Portal <br>⚽</h2>
+        <h2 class="text-center mb-4">University Intramurals Login Portal</h2>
         
         <% if (error) { %>
             <div class="alert alert-warning text-center"><%= error %></div>
@@ -19,7 +19,7 @@
         </form>
 
         <hr>
-        <p class="text-center mb-1 text-muted"><small>Are you a new student?</small></p>
+        <p class="text-center mb-1 text-muted"><small>Are you a new player?</small></p>
         <form action="/register" method="POST">
             <div class="input-group">
                 <input type="text" name="username" class="form-control form-control-sm" placeholder="New Username" required>

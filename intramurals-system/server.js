@@ -6,32 +6,30 @@ const bcrypt = require('bcryptjs');
 
 const app = express();
 
-// --- SETUP MIDDLEWARE ---
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({ secret: 'intramurals-super-secret-key', resave: false, saveUninitialized: false }));
 
-// --- REDIS CONNECTION ---
+// db connection
 const redis = new Redis({
-  host: 'redis-14178.crce272.asia-seast1-1.gcp.cloud.redislabs.com', // e.g., redis-12345.c250...
-  port: 14178,                  // e.g., 12345
+  host: 'redis-14178.crce272.asia-seast1-1.gcp.cloud.redislabs.com', 
+  port: 14178,                 
   password: 'IEtMGortH2OriEbfriSGMUvY6RiNF3Nw'
 });
 
 redis.on('connect', async () => {
-    console.log('🏆 Connected to Redis Cloud!');
+    console.log('Connected to Redis Cloud!');
     if (!(await redis.exists('user:admin'))) {
         const hashedPw = await bcrypt.hash('admin123', 10);
         await redis.hset('user:admin', 'password', hashedPw, 'role', 'manager');
     }
 });
 
-// --- AUTH MIDDLEWARE ---
 const requireLogin = (req, res, next) => req.session.username ? next() : res.redirect('/login');
 const requireManager = (req, res, next) => req.session.role === 'manager' ? next() : res.status(403).send("Managers Only.");
 
-// --- AUTH ROUTES ---
+// auth routes
 app.get('/login', (req, res) => res.render('login', { error: null }));
 app.post('/register', async (req, res) => {
     if (await redis.exists(`user:${req.body.username}`)) return res.render('login', { error: 'Username taken' });
@@ -51,7 +49,7 @@ app.post('/login', async (req, res) => {
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/login'); });
 app.get('/', (req, res) => res.redirect('/login'));
 
-// --- STUDENT ROUTES ---
+// student routes
 app.get('/student/dashboard', requireLogin, async (req, res) => {
     const leaderboardData = await redis.zrevrange('leaderboard:futsal', 0, -1, 'WITHSCORES');
     const leaderboard = [];
@@ -79,16 +77,14 @@ app.post('/student/apply-team', requireLogin, async (req, res) => {
     res.redirect('/student/dashboard?success=Team application submitted!');
 });
 
-// NEW: Student Edit Team
 app.post('/student/edit-team', requireLogin, async (req, res) => {
     const { teamId, name, players } = req.body;
     await redis.hset(`team:${teamId}`, 'name', name, 'players', players);
     res.redirect('/student/dashboard?success=Team updated successfully!');
 });
 
-// --- MANAGER ROUTES ---
+// manager routes
 app.get('/manager/dashboard', requireLogin, requireManager, async (req, res) => {
-    // Calculate Stats
     const teamKeys = await redis.keys('team:*');
     let pendingApps = 0;
     for (let k of teamKeys) { if (await redis.hget(k, 'status') === 'Pending') pendingApps++; }
@@ -143,7 +139,7 @@ app.post('/teams/delete', requireLogin, requireManager, async (req, res) => {
     res.redirect('/teams?success=Team deleted');
 });
 
-// EQUIPMENT & HISTORY
+// equipment & history
 app.get('/equipment', requireLogin, requireManager, async (req, res) => {
     const loans = [];
     for (let key of await redis.keys('loan:*')) loans.push({ id: key, ...(await redis.hgetall(key)) });
@@ -161,7 +157,6 @@ app.post('/equipment/borrow', requireLogin, requireManager, async (req, res) => 
     res.redirect('/equipment?success=Gear checked out');
 });
 
-// NEW: Archived History Logic
 app.post('/equipment/return', requireLogin, requireManager, async (req, res) => {
     const loanData = await redis.hgetall(req.body.loanId);
     loanData.returnDate = new Date().toLocaleString(); // Add return timestamp
@@ -172,7 +167,6 @@ app.post('/equipment/return', requireLogin, requireManager, async (req, res) => 
     res.redirect('/equipment?success=Gear returned and archived');
 });
 
-// NEW: History View
 app.get('/equipment/history', requireLogin, requireManager, async (req, res) => {
     const historyData = await redis.lrange('history:loans', 0, -1);
     const history = historyData.map(data => JSON.parse(data));

@@ -4,16 +4,14 @@
     <title>Manage Teams</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- QR Scanner Script -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body class="bg-light">
     <div class="container mt-4">
-        <h1 class="mb-4">⚙️ Manage Teams</h1>
+        <h1 class="mb-4">Manage Teams</h1>
         <nav class="mb-4">
             <a href="/manager/dashboard" class="btn btn-outline-primary">Dashboard</a>
             <a href="/equipment" class="btn btn-outline-primary">Equipment</a>
-            <!-- Trigger QR Modal -->
             <button class="btn btn-dark float-end ms-2" data-bs-toggle="modal" data-bs-target="#qrModal">📷 Scan QR Pass</button>
         </nav>
 
@@ -77,7 +75,6 @@
         </div>
     </div>
 
-    <!-- QR Scanner Modal -->
     <div class="modal fade" id="qrModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -89,18 +86,15 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // QR Scanner Logic
         const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
         html5QrcodeScanner.render((decodedText) => {
             html5QrcodeScanner.clear();
             const modal = bootstrap.Modal.getInstance(document.getElementById('qrModal'));
             modal.hide();
-            // Extact ID from "StudentTeam-101" and search it
             const teamId = decodedText.split('-')[1];
             window.location.href = `/teams?search=${teamId}`;
         });
 
-        // SweetAlert Logic
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('error')) Swal.fire({ icon: 'error', title: 'Oops...', text: urlParams.get('error') });
         if (urlParams.has('success')) Swal.fire({ icon: 'success', title: 'Success!', text: urlParams.get('success'), timer: 2000, showConfirmButton: false });

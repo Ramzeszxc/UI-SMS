@@ -4,13 +4,12 @@
     <title>Intramurals Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SweetAlert2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-light">
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>🏆 Manager Dashboard</h1>
+            <h1>Manager Dashboard</h1>
             <div>
                 <a href="/teams" class="btn btn-outline-primary">Teams</a>
                 <a href="/equipment" class="btn btn-outline-primary">Equipment</a>
@@ -19,7 +18,7 @@
             </div>
         </div>
 
-        <!-- NEW: Quick Stats Row -->
+        <!-- quick stats row -->
         <div class="row mb-4">
             <div class="col-md-4">
                 <div class="card bg-primary text-white shadow-sm"><div class="card-body">
@@ -42,7 +41,6 @@
             <div class="col-md-8">
                 <div class="card shadow-sm mb-4">
                     <div class="card-header bg-dark text-white">Live Leaderboard</div>
-                    <!-- NEW: table-responsive -->
                     <div class="card-body table-responsive">
                         <table class="table align-middle">
                             <thead><tr><th>Rank</th><th>Team</th><th>Points</th><th>Action</th></tr></thead>
@@ -75,7 +73,7 @@
     </div>
 
     <script>
-        // Chart Logic
+        // logic for chart
         const futsalCount = Number("<%= equipment.futsalBalls %>") || 0;
         const bibsCount = Number("<%= equipment.bibs %>") || 0;
         new Chart(document.getElementById('equipmentChart').getContext('2d'), {
@@ -83,7 +81,6 @@
             data: { labels: ['Futsal Balls', 'Bibs'], datasets: [{ data: [futsalCount, bibsCount], backgroundColor: ['#0d6efd', '#ffc107'] }] }
         });
 
-        // SweetAlert Popup Logic
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('error')) Swal.fire({ icon: 'error', title: 'Oops...', text: urlParams.get('error') });
         if (urlParams.has('success')) Swal.fire({ icon: 'success', title: 'Success!', text: urlParams.get('success'), timer: 2000, showConfirmButton: false });
