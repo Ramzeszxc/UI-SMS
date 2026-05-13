@@ -139,38 +139,51 @@ app.post('/student/apply-team', requireAuth, requireRole(['student']), async (re
 
 // --- ADVANCED TEAMS MANAGEMENT ---
 // --- ADVANCED TEAMS MANAGEMENT ---
+// --- ADVANCED TEAMS MANAGEMENT ---
 app.get('/teams', requireAuth, requireRole(['admin', 'manager', 'faculty']), async (req, res) => {
-    const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
-    const statusFilter = req.query.statusFilter || 'All';
+    try {
+        const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
+        const statusFilter = req.query.statusFilter || 'All';
 
-    let allTeams = [];
-    const keys = await redis.keys('team:*');
-    
-    // Gather all teams
-    for (let key of keys) {
-        const teamData = await redis.hgetall(key);
-        if (teamData.name) {
-            allTeams.push({ id: key.split(':')[1], ...teamData });
+        let allTeams = [];
+        const keys = await redis.keys('team:*');
+        
+        // Gather all teams
+        for (let key of keys) {
+            const teamData = await redis.hgetall(key);
+            if (teamData.name) {
+                allTeams.push({ id: key.split(':')[1], ...teamData });
+            }
         }
+
+        // ADVANCED SEARCH & FILTER LOGIC (CRASH-PROOFED)
+        let teams = allTeams.filter(team => {
+            // Using (team.property || '') prevents crashes if a field is somehow blank/missing
+            const safeId = (team.id || '').toLowerCase();
+            const safeName = (team.name || '').toLowerCase();
+            const safePlayers = (team.players || '').toLowerCase();
+
+            const matchesSearch = safeId.includes(searchQuery) || 
+                                  safeName.includes(searchQuery) || 
+                                  safePlayers.includes(searchQuery);
+                                  
+            const matchesStatus = statusFilter === 'All' || team.status === statusFilter;
+            
+            return matchesSearch && matchesStatus;
+        });
+
+        // Fetch all registered students for the Captain dropdown
+        const userKeys = await redis.keys('user:*');
+        let students = [];
+        for (let key of userKeys) {
+            if (await redis.hget(key, 'role') === 'student') students.push(key.split(':')[1]);
+        }
+
+        res.render('teams', { role: req.session.role, teams, students, searchQuery, statusFilter });
+    } catch (error) {
+        console.error("Search Error:", error);
+        res.status(500).send("An error occurred while searching. Please try again.");
     }
-
-    // ADVANCED SEARCH & FILTER LOGIC
-    let teams = allTeams.filter(team => {
-        const matchesSearch = team.id.toLowerCase().includes(searchQuery) || 
-                              team.name.toLowerCase().includes(searchQuery) || 
-                              team.players.toLowerCase().includes(searchQuery);
-        const matchesStatus = statusFilter === 'All' || team.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
-
-    // IDENTICAL TO EQUIPMENT PAGE: Fetch all registered students
-    const userKeys = await redis.keys('user:*');
-    let students = [];
-    for (let key of userKeys) {
-        if (await redis.hget(key, 'role') === 'student') students.push(key.split(':')[1]);
-    }
-
-    res.render('teams', { role: req.session.role, teams, students, searchQuery, statusFilter });
 });
 
 app.post('/teams/status', requireAuth, requireRole(['admin', 'manager']), async (req, res) => {
