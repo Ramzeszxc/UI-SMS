@@ -137,6 +137,16 @@ app.post('/student/apply-team', requireAuth, requireRole(['student']), async (re
     res.redirect('/student/dashboard?success=Application Submitted');
 });
 
+app.post('/student/edit-team', requireAuth, requireRole(['student']), async (req, res) => {
+    // Updates the database with the new name and players
+    await redis.hset(`team:${req.body.teamId}`, 'name', req.body.name, 'players', req.body.players);
+    
+    // Broadcasts the real-time update to the managers
+    io.emit('live_update', '⚽ A student just updated their team roster!'); 
+    
+    res.redirect('/student/dashboard?success=Team roster updated successfully!');
+});
+
 // --- ADVANCED TEAMS MANAGEMENT ---
 // --- ADVANCED TEAMS MANAGEMENT ---
 // --- ADVANCED TEAMS MANAGEMENT ---
