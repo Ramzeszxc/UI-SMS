@@ -1,62 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Intramurals Dashboard</title>
+    <title>Dashboard | LPU Golazo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }</style>
 </head>
-<body class="bg-light">
-    <div class="container mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>Manager Dashboard</h1>
-            <div>
-                <a href="/teams" class="btn btn-outline-primary">Teams</a>
-                <a href="/equipment" class="btn btn-outline-primary">Equipment</a>
-                <a href="/backup" class="btn btn-warning">📥 Backup</a>
-                <a href="/logout" class="btn btn-danger ms-2">Logout</a>
-            </div>
-        </div>
+<body class="d-flex flex-nowrap" style="min-height: 100vh;">
+    <div class="d-flex flex-column p-3 text-white" style="width: 250px; background-color: #002147;">
+        <span class="fs-5 fw-bold text-center mb-1">🏛️ LPU Golazo</span>
+        <span class="text-center mb-4" style="color: #FFB81C; font-size: 12px;">Role: <%= role.toUpperCase() %></span>
+        <ul class="nav nav-pills flex-column mb-auto gap-2">
+            <li><a href="/dashboard" class="nav-link text-white bg-secondary bg-opacity-25 fw-bold">📊 Dashboard</a></li>
+            <li><a href="/teams" class="nav-link text-white">⚙️ Manage Teams</a></li>
+            <li><a href="/equipment" class="nav-link text-white">⚽ Equipment Desk</a></li>
+            <li><a href="/history" class="nav-link text-white">🗄️ Audit Trail</a></li>
+            <% if (role === 'admin') { %> <li><a href="/users" class="nav-link text-white mt-3 border-top pt-3">👥 Manage Staff</a></li> <% } %>
+        </ul>
+        <a href="/backup" class="btn btn-warning btn-sm mb-2 fw-bold">📥 JSON Backup</a>
+        <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+    </div>
 
-        <!-- quick stats row -->
+    <main class="flex-grow-1 p-5">
+        <h2 class="fw-bold mb-4">Operations Overview</h2>
         <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card bg-primary text-white shadow-sm"><div class="card-body">
-                    <h5>Total Teams</h5><h2><%= stats.totalTeams %></h2>
-                </div></div>
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-warning text-dark shadow-sm"><div class="card-body">
-                    <h5>Pending Applications</h5><h2><%= stats.pendingApps %></h2>
-                </div></div>
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-success text-white shadow-sm"><div class="card-body">
-                    <h5>Active Gear Loans</h5><h2><%= stats.activeLoansCount %></h2>
-                </div></div>
-            </div>
+            <div class="col-md-4"><div class="card bg-primary text-white shadow-sm border-0"><div class="card-body"><h5>Total Teams</h5><h2><%= stats.totalTeams %></h2></div></div></div>
+            <div class="col-md-4"><div class="card bg-warning text-dark shadow-sm border-0"><div class="card-body"><h5>Active Loans</h5><h2><%= stats.activeLoans %></h2></div></div></div>
         </div>
 
-        <div class="row">
+        <div class="row mb-4">
             <div class="col-md-8">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-dark text-white">Live Leaderboard</div>
-                    <div class="card-body table-responsive">
-                        <table class="table align-middle">
-                            <thead><tr><th>Rank</th><th>Team</th><th>Points</th><th>Action</th></tr></thead>
+                <div class="card shadow-sm border-0 mb-4 bg-white">
+                    <div class="card-body">
+                        <h6 class="text-muted fw-bold">📢 Global LPU Announcement</h6>
+                        <p class="fs-5 mb-0"><%= announcement %></p>
+                        <% if (role !== 'faculty') { %>
+                        <form action="/dashboard/announce" method="POST" class="mt-3 d-flex gap-2">
+                            <input type="text" name="announcement" class="form-control form-control-sm" placeholder="Update bulletin..." required>
+                            <button class="btn btn-sm text-white fw-bold" style="background-color: #002147;">Post</button>
+                        </form>
+                        <% } %>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 table-responsive">
+                    <div class="card-header bg-white fw-bold border-bottom-0 pt-3">Live Standings</div>
+                    <div class="card-body">
+                        <table class="table align-middle m-0">
+                            <thead class="table-light"><tr><th>Rank</th><th>Team</th><th>Score</th><% if(role !== 'faculty'){%><th>Action</th><%}%></tr></thead>
                             <tbody>
                                 <% leaderboard.forEach((team, index) => { %>
                                     <tr>
-                                        <td>#<%= index + 1 %></td>
-                                        <td><strong><%= team.name %></strong></td>
-                                        <td><%= team.score %></td>
+                                        <td>#<%= index + 1 %></td><td><strong><%= team.name %></strong></td><td><%= team.score %></td>
+                                        <% if(role !== 'faculty'){%>
                                         <td>
                                             <form action="/teams/score" method="POST" class="m-0">
-                                                <input type="hidden" name="teamId" value="<%= team.id %>">
-                                                <input type="hidden" name="points" value="3">
-                                                <button type="submit" class="btn btn-sm btn-success">+3 Pts</button>
+                                                <input type="hidden" name="teamId" value="<%= team.id %>"><input type="hidden" name="points" value="3">
+                                                <button type="submit" class="btn btn-sm btn-outline-success fw-bold">+3 Pts</button>
                                             </form>
                                         </td>
+                                        <%}%>
                                     </tr>
                                 <% }) %>
                             </tbody>
@@ -65,26 +70,18 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card shadow-sm"><div class="card-body">
+                <div class="card shadow-sm border-0"><div class="card-body text-center p-4">
+                    <h6 class="fw-bold text-muted mb-4">Inventory Status</h6>
                     <canvas id="equipmentChart"></canvas>
                 </div></div>
             </div>
         </div>
-    </div>
-
+    </main>
     <script>
-        // logic for chart
-        const futsalCount = Number("<%= equipment.futsalBalls %>") || 0;
-        const bibsCount = Number("<%= equipment.bibs %>") || 0;
-        new Chart(document.getElementById('equipmentChart').getContext('2d'), {
-            type: 'doughnut',
-            data: { labels: ['Futsal Balls', 'Bibs'], datasets: [{ data: [futsalCount, bibsCount], backgroundColor: ['#0d6efd', '#ffc107'] }] }
-        });
-
+        new Chart(document.getElementById('equipmentChart').getContext('2d'), { type: 'doughnut', data: { labels: ['Balls', 'Bibs'], datasets: [{ data: [Number("<%= equipment.futsalBalls %>")||0, Number("<%= equipment.bibs %>")||0], backgroundColor: ['#002147', '#FFB81C'], borderWidth: 0 }] }, options: { cutout: '70%' } });
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('error')) Swal.fire({ icon: 'error', title: 'Oops...', text: urlParams.get('error') });
-        if (urlParams.has('success')) Swal.fire({ icon: 'success', title: 'Success!', text: urlParams.get('success'), timer: 2000, showConfirmButton: false });
-        window.history.replaceState({}, document.title, window.location.pathname); // Clean URL
+        if (urlParams.has('success')) Swal.fire({ icon: 'success', title: 'Success', text: urlParams.get('success'), timer: 2000, showConfirmButton: false });
+        window.history.replaceState({}, document.title, window.location.pathname);
     </script>
 </body>
 </html>

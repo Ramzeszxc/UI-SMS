@@ -1,70 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Manage Teams</title>
+    <title>Teams | LPU Golazo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }</style>
 </head>
-<body class="bg-light">
-    <div class="container mt-4">
-        <h1 class="mb-4">Manage Teams</h1>
-        <nav class="mb-4">
-            <a href="/manager/dashboard" class="btn btn-outline-primary">Dashboard</a>
-            <a href="/equipment" class="btn btn-outline-primary">Equipment</a>
-            <button class="btn btn-dark float-end ms-2" data-bs-toggle="modal" data-bs-target="#qrModal">📷 Scan QR Pass</button>
-        </nav>
+<body class="d-flex flex-nowrap" style="min-height: 100vh;">
+    <div class="d-flex flex-column p-3 text-white" style="width: 250px; background-color: #002147;">
+        <span class="fs-5 fw-bold text-center mb-1">🏛️ LPU Golazo</span>
+        <span class="text-center mb-4" style="color: #FFB81C; font-size: 12px;">Role: <%= role.toUpperCase() %></span>
+        <ul class="nav nav-pills flex-column mb-auto gap-2">
+            <li><a href="/dashboard" class="nav-link text-white">📊 Dashboard</a></li>
+            <li><a href="/teams" class="nav-link text-white bg-secondary bg-opacity-25 fw-bold">⚙️ Manage Teams</a></li>
+            <li><a href="/equipment" class="nav-link text-white">⚽ Equipment Desk</a></li>
+            <li><a href="/history" class="nav-link text-white">🗄️ Audit Trail</a></li>
+            <% if (role === 'admin') { %> <li><a href="/users" class="nav-link text-white mt-3 border-top pt-3">👥 Manage Staff</a></li> <% } %>
+        </ul>
+        <a href="/logout" class="btn btn-outline-light btn-sm mt-4">Logout</a>
+    </div>
 
+    <main class="flex-grow-1 p-5">
+        <h2 class="fw-bold mb-4">⚙️ Manage LPU Teams</h2>
         <div class="row">
+            <% if (role !== 'faculty') { %>
             <div class="col-md-3">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-success text-white">Register Team</div>
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white fw-bold pt-3 border-0">Add Team</div>
                     <div class="card-body">
                         <form action="/teams/add" method="POST">
-                            <input type="text" name="teamId" class="form-control mb-2" placeholder="Team ID" required>
-                            <input type="text" name="name" class="form-control mb-2" placeholder="Team Name" required>
-                            <input type="text" name="captain" class="form-control mb-2" placeholder="Captain Username" required>
-                            <textarea name="players" class="form-control mb-3" rows="2" placeholder="Players..." required></textarea>
-                            <button type="submit" class="btn btn-success w-100">Register</button>
+                            <input type="text" name="teamId" class="form-control mb-2 bg-light border-0" placeholder="Team ID" required>
+                            <input type="text" name="name" class="form-control mb-2 bg-light border-0" placeholder="Team Name" required>
+                            <input type="text" name="captain" class="form-control mb-2 bg-light border-0" placeholder="Captain Email" required>
+                            <textarea name="players" class="form-control mb-3 bg-light border-0" rows="2" placeholder="Players..." required></textarea>
+                            <button type="submit" class="btn text-white w-100 fw-bold" style="background-color: #002147;">Register</button>
                         </form>
                     </div>
                 </div>
             </div>
+            <% } %>
 
             <div class="col-md-9">
                 <form action="/teams" method="GET" class="d-flex mb-3">
-                    <input type="text" name="search" id="searchInput" class="form-control me-2" placeholder="Search by Team ID...">
-                    <button type="submit" class="btn btn-primary">Search</button>
-                    <a href="/teams" class="btn btn-secondary ms-2">Clear</a>
+                    <input type="text" name="search" class="form-control me-2 border-0 shadow-sm" placeholder="Search by Team ID...">
+                    <button type="submit" class="btn text-white shadow-sm fw-bold" style="background-color: #002147;">Search</button>
+                    <a href="/teams" class="btn btn-secondary ms-2 shadow-sm">Clear</a>
                 </form>
 
-                <div class="card shadow-sm table-responsive">
+                <div class="card shadow-sm border-0 table-responsive">
                     <div class="card-body">
-                        <table class="table align-middle">
-                            <thead><tr><th>ID</th><th>Name</th><th>Players</th><th>Status</th><th>QR</th><th>Action</th></tr></thead>
+                        <table class="table align-middle m-0">
+                            <thead class="table-light"><tr><th>ID</th><th>Name</th><th>Players</th><th>Status</th><% if(role !== 'faculty'){%><th>Action</th><%}%></tr></thead>
                             <tbody>
                                 <% teams.forEach(team => { %>
                                     <tr>
-                                        <td><%= team.id %></td>
-                                        <td><strong><%= team.name %></strong></td>
-                                        <td><small class="text-muted"><%= team.players %></small></td>
+                                        <td><%= team.id %></td><td><strong><%= team.name %></strong></td><td><small class="text-muted"><%= team.players %></small></td>
                                         <td>
-                                            <form action="/teams/status" method="POST" class="m-0 d-flex gap-1">
+                                            <% if (role !== 'faculty') { %>
+                                            <form action="/teams/status" method="POST" class="m-0">
                                                 <input type="hidden" name="teamId" value="<%= team.id %>">
-                                                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                                                <select name="status" class="form-select form-select-sm border-0 bg-light" onchange="this.form.submit()">
                                                     <option value="Pending" <%= team.status === 'Pending' ? 'selected' : '' %>>Pending</option>
                                                     <option value="Cleared" <%= team.status === 'Cleared' ? 'selected' : '' %>>Cleared</option>
                                                     <option value="Disqualified" <%= team.status === 'Disqualified' ? 'selected' : '' %>>Disqualified</option>
                                                 </select>
                                             </form>
+                                            <% } else { %>
+                                                <span class="badge bg-success"><%= team.status %></span>
+                                            <% } %>
                                         </td>
-                                        <td><img src="https://api.qrserver.com/v1/create-qr-code/?size=40x40&data=StudentTeam-<%= team.id %>"></td>
+                                        <% if (role !== 'faculty') { %>
                                         <td>
                                             <form action="/teams/delete" method="POST" class="m-0">
                                                 <input type="hidden" name="teamId" value="<%= team.id %>">
-                                                <button type="submit" class="btn btn-sm btn-danger">🗑️</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
                                             </form>
                                         </td>
+                                        <% } %>
                                     </tr>
                                 <% }) %>
                             </tbody>
@@ -73,31 +86,11 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <div class="modal fade" id="qrModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Scan Student QR</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body"><div id="reader" width="100%"></div></div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </main>
     <script>
-        const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
-        html5QrcodeScanner.render((decodedText) => {
-            html5QrcodeScanner.clear();
-            const modal = bootstrap.Modal.getInstance(document.getElementById('qrModal'));
-            modal.hide();
-            const teamId = decodedText.split('-')[1];
-            window.location.href = `/teams?search=${teamId}`;
-        });
-
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('error')) Swal.fire({ icon: 'error', title: 'Oops...', text: urlParams.get('error') });
-        if (urlParams.has('success')) Swal.fire({ icon: 'success', title: 'Success!', text: urlParams.get('success'), timer: 2000, showConfirmButton: false });
+        if (urlParams.has('success')) Swal.fire({ icon: 'success', title: 'Success', text: urlParams.get('success'), timer: 2000, showConfirmButton: false });
         window.history.replaceState({}, document.title, window.location.pathname);
     </script>
 </body>

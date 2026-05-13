@@ -1,30 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Archived Logs</title>
+    <title>Audit Trail | LPU Golazo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }</style>
 </head>
-<body class="bg-light">
-    <div class="container mt-4">
-        <h1 class="mb-4">Archived Loan History</h1>
-        <a href="/equipment" class="btn btn-outline-primary mb-4">Back to Active Equipment</a>
-        
-        <div class="card shadow-sm table-responsive">
-            <table class="table align-middle m-0">
-                <thead class="table-dark"><tr><th>Borrower</th><th>Item</th><th>Qty</th><th>Borrowed On</th><th>Returned On</th></tr></thead>
+<body class="d-flex flex-nowrap" style="min-height: 100vh;">
+    <div class="d-flex flex-column p-3 text-white" style="width: 250px; background-color: #002147;">
+        <span class="fs-5 fw-bold text-center mb-1">🏛️ LPU Golazo</span>
+        <span class="text-center mb-4" style="color: #FFB81C; font-size: 12px;">Role: <%= role.toUpperCase() %></span>
+        <ul class="nav nav-pills flex-column mb-auto gap-2">
+            <li><a href="/dashboard" class="nav-link text-white">📊 Dashboard</a></li>
+            <li><a href="/teams" class="nav-link text-white">⚙️ Manage Teams</a></li>
+            <li><a href="/equipment" class="nav-link text-white">⚽ Equipment Desk</a></li>
+            <li><a href="/history" class="nav-link text-white bg-secondary bg-opacity-25 fw-bold">🗄️ Audit Trail</a></li>
+            <% if (role === 'admin') { %> <li><a href="/users" class="nav-link text-white mt-3 border-top pt-3">👥 Manage Staff</a></li> <% } %>
+        </ul>
+        <a href="/logout" class="btn btn-outline-light btn-sm mt-4">Logout</a>
+    </div>
+
+    <main class="flex-grow-1 p-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold">🗄️ Master Audit Trail</h2>
+            <button onclick="exportTableToCSV('lpu_golazo_audit_log.csv')" class="btn text-white fw-bold shadow-sm" style="background-color: #002147;">📥 Export to Excel (CSV)</button>
+        </div>
+
+        <div class="card shadow-sm border-0 table-responsive">
+            <table class="table align-middle m-0" id="auditTable">
+                <thead class="table-light"><tr><th>Date Returned</th><th>Borrower</th><th>Item</th><th>Issued By</th><th>Received By</th></tr></thead>
                 <tbody>
                     <% history.forEach(log => { %>
                         <tr>
-                            <td><%= log.borrower %></td>
-                            <td><%= log.item.replace('_', ' ') %></td>
-                            <td><%= log.quantity %></td>
-                            <td><small class="text-muted"><%= log.date %></small></td>
                             <td><span class="badge bg-secondary"><%= log.returnDate %></span></td>
+                            <td><strong><%= log.borrower %></strong></td>
+                            <td><%= log.item.replace('_',' ') %> (x<%= log.quantity %>)</td>
+                            <td><small class="text-muted"><%= log.issuedBy %></small></td>
+                            <td><small class="text-muted"><%= log.receivedBy %></small></td>
                         </tr>
                     <% }) %>
                 </tbody>
             </table>
         </div>
-    </div>
+    </main>
+
+    <script>
+        function exportTableToCSV(filename) {
+            let csv = [];
+            let rows = document.querySelectorAll("table tr");
+            for (let i = 0; i < rows.length; i++) {
+                let row = [], cols = rows[i].querySelectorAll("td, th");
+                for (let j = 0; j < cols.length; j++) row.push(cols[j].innerText);
+                csv.push(row.join(","));
+            }
+            let csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+            let downloadLink = document.createElement("a");
+            downloadLink.download = filename;
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+        }
+    </script>
 </body>
 </html>
