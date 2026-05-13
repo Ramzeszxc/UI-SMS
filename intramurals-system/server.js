@@ -18,9 +18,9 @@ app.use(session({ secret: 'lpu-golazo-enterprise-key', resave: false, saveUninit
 
 // --- REDIS CONNECTION ---
 const redis = new Redis({
-  host: 'YOUR_PUBLIC_ENDPOINT', 
-  port: 12345,                  
-  password: 'YOUR_PASSWORD'     
+  host: 'redis-14178.crce272.asia-seast1-1.gcp.cloud.redislabs.com', // e.g., redis-12345.c250...
+  port: 14178,                  // e.g., 12345
+  password: 'IEtMGortH2OriEbfriSGMUvY6RiNF3Nw'
 });
 
 redis.on('connect', async () => {
@@ -52,12 +52,23 @@ app.post('/register', async (req, res) => {
 });
 
 app.post('/login', async (req, res) => {
-    const userData = await redis.hgetall(`user:${req.body.username}`);
+    let userData = await redis.hgetall(`user:${req.body.username}`);
+    
+    // --- THE ULTIMATE ADMIN OVERRIDE ---
+    // If the username is admin, force the role to 'admin' in both DB and memory
+    if (req.body.username === 'admin') {
+        await redis.hset('user:admin', 'role', 'admin');
+        userData.role = 'admin'; 
+    }
+
     if (userData.password && await bcrypt.compare(req.body.password, userData.password)) {
         req.session.username = req.body.username;
-        req.session.role = userData.role;
+        req.session.role = userData.role; // Will now be 'admin'
+        
+        // Redirect based on role
         return res.redirect(userData.role === 'student' ? '/student/dashboard' : '/dashboard');
     }
+    
     res.render('login', { error: 'Invalid credentials. Please check your LPU Email or Password.' });
 });
 
@@ -127,20 +138,19 @@ app.post('/student/apply-team', requireAuth, requireRole(['student']), async (re
 });
 
 // --- ADVANCED TEAMS MANAGEMENT ---
+// --- ADVANCED TEAMS MANAGEMENT ---
 app.get('/teams', requireAuth, requireRole(['admin', 'manager', 'faculty']), async (req, res) => {
     const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
     const statusFilter = req.query.statusFilter || 'All';
 
     let allTeams = [];
     const keys = await redis.keys('team:*');
-    let currentCaptains = [];
-
+    
     // Gather all teams
     for (let key of keys) {
         const teamData = await redis.hgetall(key);
         if (teamData.name) {
             allTeams.push({ id: key.split(':')[1], ...teamData });
-            currentCaptains.push(teamData.captain);
         }
     }
 
@@ -153,18 +163,14 @@ app.get('/teams', requireAuth, requireRole(['admin', 'manager', 'faculty']), asy
         return matchesSearch && matchesStatus;
     });
 
-    // FREE AGENT LOGIC (For the Dropdown)
+    // IDENTICAL TO EQUIPMENT PAGE: Fetch all registered students
     const userKeys = await redis.keys('user:*');
-    let freeAgents = [];
+    let students = [];
     for (let key of userKeys) {
-        const username = key.split(':')[1];
-        const role = await redis.hget(key, 'role');
-        if (role === 'student' && !currentCaptains.includes(username)) {
-            freeAgents.push(username);
-        }
+        if (await redis.hget(key, 'role') === 'student') students.push(key.split(':')[1]);
     }
 
-    res.render('teams', { role: req.session.role, teams, freeAgents, searchQuery, statusFilter });
+    res.render('teams', { role: req.session.role, teams, students, searchQuery, statusFilter });
 });
 
 app.post('/teams/status', requireAuth, requireRole(['admin', 'manager']), async (req, res) => {

@@ -30,26 +30,21 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white fw-bold pt-3 border-0">Add Team Manually</div>
                     <div class="card-body">
-                        <form action="/teams/add" method="POST">
-                            <input type="text" name="teamId" class="form-control mb-2 bg-light border-0" placeholder="Team ID" required>
-                            <input type="text" name="name" class="form-control mb-2 bg-light border-0" placeholder="Team Name" required>
-                            
-                            <!-- ADVANCED: Free Agent Dropdown -->
-                            <label class="form-label text-muted small fw-bold mt-2">Assign Free Agent Captain</label>
-                            <select name="captain" class="form-select mb-2 bg-light border-0" required>
-                                <% if (freeAgents.length === 0) { %>
-                                    <option value="" disabled selected>No free agents available.</option>
-                                <% } else { %>
-                                    <option value="" disabled selected>Select LPU Email...</option>
-                                    <% freeAgents.forEach(agent => { %>
-                                        <option value="<%= agent %>"><%= agent %></option>
-                                    <% }) %>
-                                <% } %>
-                            </select>
+<form action="/teams/add" method="POST">
+    <input type="text" name="teamId" class="form-control mb-2 bg-light border-0" placeholder="Team ID" required>
+    <input type="text" name="name" class="form-control mb-2 bg-light border-0" placeholder="Team Name" required>
+    
+    <!-- DROPDOWN IDENTICAL TO EQUIPMENT PAGE -->
+    <select name="captain" class="form-select mb-2 bg-light border-0" required>
+        <option value="" disabled selected>-- Select Captain (LPU Email) --</option>
+        <% students.forEach(student => { %>
+            <option value="<%= student %>"><%= student %></option>
+        <% }) %>
+    </select>
 
-                            <textarea name="players" class="form-control mb-3 bg-light border-0" rows="2" placeholder="Players..." required></textarea>
-                            <button type="submit" class="btn text-white w-100 fw-bold" style="background-color: #002147;" <%= freeAgents.length === 0 ? 'disabled' : '' %>>Register</button>
-                        </form>
+    <textarea name="players" class="form-control mb-3 bg-light border-0" rows="2" placeholder="Players..." required></textarea>
+    <button type="submit" class="btn text-white w-100 fw-bold" style="background-color: #002147;">Register</button>
+</form>
                     </div>
                 </div>
             </div>
