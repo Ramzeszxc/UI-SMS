@@ -8,6 +8,7 @@
     <style>body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }</style>
 </head>
 <body class="d-flex flex-nowrap" style="min-height: 100vh;">
+    <!-- SIDEBAR -->
     <div class="d-flex flex-column p-3 text-white" style="width: 250px; background-color: #002147;">
         <span class="fs-5 fw-bold text-center mb-1">🏛️ LPU Golazo</span>
         <span class="text-center mb-4" style="color: #FFB81C; font-size: 12px;">Role: <%= role.toUpperCase() %></span>
@@ -27,14 +28,27 @@
             <% if (role !== 'faculty') { %>
             <div class="col-md-3">
                 <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white fw-bold pt-3 border-0">Add Team</div>
+                    <div class="card-header bg-white fw-bold pt-3 border-0">Add Team Manually</div>
                     <div class="card-body">
                         <form action="/teams/add" method="POST">
                             <input type="text" name="teamId" class="form-control mb-2 bg-light border-0" placeholder="Team ID" required>
                             <input type="text" name="name" class="form-control mb-2 bg-light border-0" placeholder="Team Name" required>
-                            <input type="text" name="captain" class="form-control mb-2 bg-light border-0" placeholder="Captain Email" required>
+                            
+                            <!-- ADVANCED: Free Agent Dropdown -->
+                            <label class="form-label text-muted small fw-bold mt-2">Assign Free Agent Captain</label>
+                            <select name="captain" class="form-select mb-2 bg-light border-0" required>
+                                <% if (freeAgents.length === 0) { %>
+                                    <option value="" disabled selected>No free agents available.</option>
+                                <% } else { %>
+                                    <option value="" disabled selected>Select LPU Email...</option>
+                                    <% freeAgents.forEach(agent => { %>
+                                        <option value="<%= agent %>"><%= agent %></option>
+                                    <% }) %>
+                                <% } %>
+                            </select>
+
                             <textarea name="players" class="form-control mb-3 bg-light border-0" rows="2" placeholder="Players..." required></textarea>
-                            <button type="submit" class="btn text-white w-100 fw-bold" style="background-color: #002147;">Register</button>
+                            <button type="submit" class="btn text-white w-100 fw-bold" style="background-color: #002147;" <%= freeAgents.length === 0 ? 'disabled' : '' %>>Register</button>
                         </form>
                     </div>
                 </div>
@@ -42,10 +56,17 @@
             <% } %>
 
             <div class="col-md-9">
-                <form action="/teams" method="GET" class="d-flex mb-3">
-                    <input type="text" name="search" class="form-control me-2 border-0 shadow-sm" placeholder="Search by Team ID...">
+                <!-- ADVANCED: Multi-Search and Filter -->
+                <form action="/teams" method="GET" class="d-flex mb-3 gap-2">
+                    <input type="text" name="search" class="form-control border-0 shadow-sm" placeholder="Search ID, Name, or Players..." value="<%= searchQuery %>">
+                    <select name="statusFilter" class="form-select border-0 shadow-sm" style="width: 150px;">
+                        <option value="All" <%= statusFilter === 'All' ? 'selected' : '' %>>All Status</option>
+                        <option value="Pending" <%= statusFilter === 'Pending' ? 'selected' : '' %>>Pending</option>
+                        <option value="Cleared" <%= statusFilter === 'Cleared' ? 'selected' : '' %>>Cleared</option>
+                        <option value="Disqualified" <%= statusFilter === 'Disqualified' ? 'selected' : '' %>>Disqualified</option>
+                    </select>
                     <button type="submit" class="btn text-white shadow-sm fw-bold" style="background-color: #002147;">Search</button>
-                    <a href="/teams" class="btn btn-secondary ms-2 shadow-sm">Clear</a>
+                    <a href="/teams" class="btn btn-secondary shadow-sm">Clear</a>
                 </form>
 
                 <div class="card shadow-sm border-0 table-responsive">
@@ -53,33 +74,42 @@
                         <table class="table align-middle m-0">
                             <thead class="table-light"><tr><th>ID</th><th>Name</th><th>Players</th><th>Status</th><% if(role !== 'faculty'){%><th>Action</th><%}%></tr></thead>
                             <tbody>
-                                <% teams.forEach(team => { %>
+                                <% if (teams.length === 0) { %>
                                     <tr>
-                                        <td><%= team.id %></td><td><strong><%= team.name %></strong></td><td><small class="text-muted"><%= team.players %></small></td>
-                                        <td>
-                                            <% if (role !== 'faculty') { %>
-                                            <form action="/teams/status" method="POST" class="m-0">
-                                                <input type="hidden" name="teamId" value="<%= team.id %>">
-                                                <select name="status" class="form-select form-select-sm border-0 bg-light" onchange="this.form.submit()">
-                                                    <option value="Pending" <%= team.status === 'Pending' ? 'selected' : '' %>>Pending</option>
-                                                    <option value="Cleared" <%= team.status === 'Cleared' ? 'selected' : '' %>>Cleared</option>
-                                                    <option value="Disqualified" <%= team.status === 'Disqualified' ? 'selected' : '' %>>Disqualified</option>
-                                                </select>
-                                            </form>
-                                            <% } else { %>
-                                                <span class="badge bg-success"><%= team.status %></span>
-                                            <% } %>
+                                        <td colspan="5" class="text-center py-5 text-muted">
+                                            <h4 class="fw-bold">No Teams Found</h4>
+                                            <p>Try adjusting your search criteria or status filter.</p>
                                         </td>
-                                        <% if (role !== 'faculty') { %>
-                                        <td>
-                                            <form action="/teams/delete" method="POST" class="m-0">
-                                                <input type="hidden" name="teamId" value="<%= team.id %>">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
-                                            </form>
-                                        </td>
-                                        <% } %>
                                     </tr>
-                                <% }) %>
+                                <% } else { %>
+                                    <% teams.forEach(team => { %>
+                                        <tr>
+                                            <td><%= team.id %></td><td><strong><%= team.name %></strong></td><td><small class="text-muted"><%= team.players %></small></td>
+                                            <td>
+                                                <% if (role !== 'faculty') { %>
+                                                <form action="/teams/status" method="POST" class="m-0">
+                                                    <input type="hidden" name="teamId" value="<%= team.id %>">
+                                                    <select name="status" class="form-select form-select-sm border-0 bg-light" onchange="this.form.submit()">
+                                                        <option value="Pending" <%= team.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                                                        <option value="Cleared" <%= team.status === 'Cleared' ? 'selected' : '' %>>Cleared</option>
+                                                        <option value="Disqualified" <%= team.status === 'Disqualified' ? 'selected' : '' %>>Disqualified</option>
+                                                    </select>
+                                                </form>
+                                                <% } else { %>
+                                                    <span class="badge bg-success"><%= team.status %></span>
+                                                <% } %>
+                                            </td>
+                                            <% if (role !== 'faculty') { %>
+                                            <td>
+                                                <form action="/teams/delete" method="POST" class="m-0">
+                                                    <input type="hidden" name="teamId" value="<%= team.id %>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
+                                                </form>
+                                            </td>
+                                            <% } %>
+                                        </tr>
+                                    <% }) %>
+                                <% } %>
                             </tbody>
                         </table>
                     </div>
@@ -87,7 +117,15 @@
             </div>
         </div>
     </main>
+    
+    <!-- Socket.io Script -->
+    <script src="/socket.io/socket.io.js"></script>
     <script>
+        const socket = io();
+        socket.on('live_update', (message) => {
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, timerProgressBar: true });
+            Toast.fire({ icon: 'info', title: 'Live Update', text: message }).then(() => location.reload());
+        });
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('error')) Swal.fire({ icon: 'error', title: 'Oops...', text: urlParams.get('error') });
         if (urlParams.has('success')) Swal.fire({ icon: 'success', title: 'Success', text: urlParams.get('success'), timer: 2000, showConfirmButton: false });

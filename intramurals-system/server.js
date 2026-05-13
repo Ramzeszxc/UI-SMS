@@ -3,8 +3,12 @@ const Redis = require('ioredis');
 const path = require('path');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server); // Initialize Real-Time WebSockets
 
 // --- SETUP MIDDLEWARE ---
 app.set('view engine', 'ejs');
@@ -14,18 +18,17 @@ app.use(session({ secret: 'lpu-golazo-enterprise-key', resave: false, saveUninit
 
 // --- REDIS CONNECTION ---
 const redis = new Redis({
-  host: 'redis-14178.crce272.asia-seast1-1.gcp.cloud.redislabs.com', 
-  port: 14178,                 
-  password: 'IEtMGortH2OriEbfriSGMUvY6RiNF3Nw'
+  host: 'YOUR_PUBLIC_ENDPOINT', 
+  port: 12345,                  
+  password: 'YOUR_PASSWORD'     
 });
 
 redis.on('connect', async () => {
-    console.log('🏛️ Connected to Redis Cloud (LPU Golazo Mode)!');
-    if (!(await redis.exists('user:admin'))) {
-        const hashedPw = await bcrypt.hash('admin123', 10);
-        await redis.hset('user:admin', 'password', hashedPw, 'role', 'admin');
-        console.log('Super Admin created: admin / admin123');
-    }
+    console.log('🏛️ Connected to Redis Cloud (LPU Golazo + Real-Time Mode)!');
+    // FORCE FIX: Guarantees the 'admin' account is actually an 'admin'
+    const hashedPw = await bcrypt.hash('admin123', 10);
+    await redis.hset('user:admin', 'password', hashedPw, 'role', 'admin');
+    console.log('Super Admin ensured: admin / admin123');
 });
 
 // --- ROLE-BASED AUTH MIDDLEWARE ---
@@ -40,12 +43,7 @@ app.get('/login', (req, res) => res.render('login', { error: null }));
 
 app.post('/register', async (req, res) => {
     const email = req.body.username; 
-    
-    // STRICT LPU DOMAIN VALIDATION
-    if (!email.endsWith('@lpu.edu.ph')) {
-        return res.render('login', { error: 'Access Denied: You must use a valid @lpu.edu.ph student email.' });
-    }
-
+    if (!email.endsWith('@lpu.edu.ph')) return res.render('login', { error: 'Access Denied: You must use a valid @lpu.edu.ph student email.' });
     if (await redis.exists(`user:${email}`)) return res.render('login', { error: 'This university email is already registered.' });
     
     const hashedPw = await bcrypt.hash(req.body.password, 10);
@@ -66,7 +64,6 @@ app.post('/login', async (req, res) => {
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/login'); });
 app.get('/', (req, res) => res.redirect('/login'));
 
-
 // --- ADMIN ONLY: USER MANAGEMENT ---
 app.get('/users', requireAuth, requireRole(['admin']), async (req, res) => {
     const userKeys = await redis.keys('user:*');
@@ -85,29 +82,22 @@ app.post('/users/create', requireAuth, requireRole(['admin']), async (req, res) 
     res.redirect('/users?success=Staff Account Created');
 });
 
-
-// --- SHARED DASHBOARD (Admin, Manager, Faculty) ---
+// --- SHARED DASHBOARD ---
 app.get('/dashboard', requireAuth, requireRole(['admin', 'manager', 'faculty']), async (req, res) => {
-    const stats = {
-        totalTeams: (await redis.keys('team:*')).length,
-        activeLoans: (await redis.keys('loan:*')).length
-    };
+    const stats = { totalTeams: (await redis.keys('team:*')).length, activeLoans: (await redis.keys('loan:*')).length };
     const leaderboardData = await redis.zrevrange('leaderboard:futsal', 0, -1, 'WITHSCORES');
     const leaderboard = [];
-    for (let i = 0; i < leaderboardData.length; i += 2) {
-        leaderboard.push({ id: leaderboardData[i], name: await redis.hget(`team:${leaderboardData[i]}`, 'name'), score: leaderboardData[i+1] });
-    }
+    for (let i = 0; i < leaderboardData.length; i += 2) leaderboard.push({ id: leaderboardData[i], name: await redis.hget(`team:${leaderboardData[i]}`, 'name'), score: leaderboardData[i+1] });
     const equipment = { futsalBalls: await redis.hget('equipment:futsal_balls', 'available') || 10, bibs: await redis.hget('equipment:bibs', 'available') || 20 };
     const announcement = await redis.get('global_announcement') || "No active announcements.";
-
     res.render('dashboard', { role: req.session.role, leaderboard, equipment, stats, announcement });
 });
 
 app.post('/dashboard/announce', requireAuth, requireRole(['admin', 'manager']), async (req, res) => {
     await redis.set('global_announcement', req.body.announcement);
+    io.emit('live_update', '📢 New Announcement Posted!'); // Broadcast Update
     res.redirect('/dashboard?success=Announcement Posted');
 });
-
 
 // --- STUDENT ROUTES ---
 app.get('/student/dashboard', requireAuth, requireRole(['student']), async (req, res) => {
@@ -132,33 +122,60 @@ app.post('/student/apply-team', requireAuth, requireRole(['student']), async (re
     if (await redis.exists(`team:${req.body.teamId}`)) return res.redirect('/student/dashboard?error=Team ID taken!');
     await redis.hset(`team:${req.body.teamId}`, 'name', req.body.name, 'captain', req.session.username, 'players', req.body.players, 'status', 'Pending');
     await redis.zadd('leaderboard:futsal', 0, req.body.teamId);
+    io.emit('live_update', '⚽ New Team Application Submitted!'); // Broadcast
     res.redirect('/student/dashboard?success=Application Submitted');
 });
 
-app.post('/student/edit-team', requireAuth, requireRole(['student']), async (req, res) => {
-    await redis.hset(`team:${req.body.teamId}`, 'name', req.body.name, 'players', req.body.players);
-    res.redirect('/student/dashboard?success=Team updated successfully!');
-});
-
-
-// --- TEAMS MANAGEMENT ---
+// --- ADVANCED TEAMS MANAGEMENT ---
 app.get('/teams', requireAuth, requireRole(['admin', 'manager', 'faculty']), async (req, res) => {
-    let teams = [];
-    const keys = req.query.search ? [`team:${req.query.search}`] : await redis.keys('team:*');
+    const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
+    const statusFilter = req.query.statusFilter || 'All';
+
+    let allTeams = [];
+    const keys = await redis.keys('team:*');
+    let currentCaptains = [];
+
+    // Gather all teams
     for (let key of keys) {
         const teamData = await redis.hgetall(key);
-        if (teamData.name) teams.push({ id: key.split(':')[1], ...teamData });
+        if (teamData.name) {
+            allTeams.push({ id: key.split(':')[1], ...teamData });
+            currentCaptains.push(teamData.captain);
+        }
     }
-    res.render('teams', { role: req.session.role, teams });
+
+    // ADVANCED SEARCH & FILTER LOGIC
+    let teams = allTeams.filter(team => {
+        const matchesSearch = team.id.toLowerCase().includes(searchQuery) || 
+                              team.name.toLowerCase().includes(searchQuery) || 
+                              team.players.toLowerCase().includes(searchQuery);
+        const matchesStatus = statusFilter === 'All' || team.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
+    // FREE AGENT LOGIC (For the Dropdown)
+    const userKeys = await redis.keys('user:*');
+    let freeAgents = [];
+    for (let key of userKeys) {
+        const username = key.split(':')[1];
+        const role = await redis.hget(key, 'role');
+        if (role === 'student' && !currentCaptains.includes(username)) {
+            freeAgents.push(username);
+        }
+    }
+
+    res.render('teams', { role: req.session.role, teams, freeAgents, searchQuery, statusFilter });
 });
 
 app.post('/teams/status', requireAuth, requireRole(['admin', 'manager']), async (req, res) => {
     await redis.hset(`team:${req.body.teamId}`, 'status', req.body.status);
+    io.emit('live_update', `⚽ A team status was changed to ${req.body.status}`); // Broadcast
     res.redirect('/teams');
 });
 
 app.post('/teams/score', requireAuth, requireRole(['admin', 'manager']), async (req, res) => {
     await redis.zincrby('leaderboard:futsal', req.body.points, req.body.teamId);
+    io.emit('live_update', '🏆 The Live Leaderboard has been updated!'); // Broadcast
     res.redirect('/dashboard');
 });
 
@@ -166,17 +183,18 @@ app.post('/teams/add', requireAuth, requireRole(['admin', 'manager']), async (re
     if (await redis.exists(`team:${req.body.teamId}`)) return res.redirect('/teams?error=Team ID exists!');
     await redis.hset(`team:${req.body.teamId}`, 'name', req.body.name, 'captain', req.body.captain, 'players', req.body.players, 'status', 'Cleared');
     await redis.zadd('leaderboard:futsal', 0, req.body.teamId);
+    io.emit('live_update', '⚽ A new team was manually added!'); // Broadcast
     res.redirect('/teams?success=Team added');
 });
 
 app.post('/teams/delete', requireAuth, requireRole(['admin', 'manager']), async (req, res) => {
     await redis.del(`team:${req.body.teamId}`);
     await redis.zrem('leaderboard:futsal', req.body.teamId);
+    io.emit('live_update', '⚽ A team was deleted from the roster.'); // Broadcast
     res.redirect('/teams?success=Team deleted');
 });
 
-
-// --- EQUIPMENT & AUDIT TRAIL ---
+// --- EQUIPMENT ROUTE ---
 app.get('/equipment', requireAuth, requireRole(['admin', 'manager', 'faculty']), async (req, res) => {
     const loans = [];
     for (let key of await redis.keys('loan:*')) loans.push({ id: key, ...(await redis.hgetall(key)) });
@@ -186,14 +204,14 @@ app.get('/equipment', requireAuth, requireRole(['admin', 'manager', 'faculty']),
     }
     res.render('equipment', { role: req.session.role, loans, students, prefillStudent: req.query.student || null });
 });
-
+// (Borrow, Return, History, Backup remain unchanged, just update via Server listener)
 app.post('/equipment/borrow', requireAuth, requireRole(['admin', 'manager']), async (req, res) => {
     const { borrower, item, quantity } = req.body;
     await redis.hset(`loan:${Date.now()}`, { borrower, item, quantity, date: new Date().toLocaleString(), issuedBy: req.session.username });
     await redis.hincrby(`equipment:${item}`, 'available', -quantity);
+    io.emit('live_update', '🏀 Equipment inventory updated!'); 
     res.redirect('/equipment?success=Gear Issued');
 });
-
 app.post('/equipment/return', requireAuth, requireRole(['admin', 'manager']), async (req, res) => {
     const loanData = await redis.hgetall(req.body.loanId);
     loanData.returnDate = new Date().toLocaleString();
@@ -201,15 +219,14 @@ app.post('/equipment/return', requireAuth, requireRole(['admin', 'manager']), as
     await redis.lpush('history:loans', JSON.stringify(loanData));
     await redis.del(req.body.loanId);
     await redis.hincrby(`equipment:${req.body.item}`, 'available', req.body.quantity);
+    io.emit('live_update', '🏀 Equipment inventory updated!'); 
     res.redirect('/equipment?success=Gear Returned');
 });
-
 app.get('/history', requireAuth, requireRole(['admin', 'manager', 'faculty']), async (req, res) => {
     const historyData = await redis.lrange('history:loans', 0, -1);
     const history = historyData.map(data => JSON.parse(data));
     res.render('history', { role: req.session.role, history });
 });
-
 app.get('/backup', requireAuth, requireRole(['admin', 'manager', 'faculty']), async (req, res) => {
     const backupData = {};
     for (let key of await redis.keys('*')) {
@@ -218,9 +235,9 @@ app.get('/backup', requireAuth, requireRole(['admin', 'manager', 'faculty']), as
         if (type === 'zset') backupData[key] = await redis.zrange(key, 0, -1, 'WITHSCORES');
         if (type === 'list') backupData[key] = await redis.lrange(key, 0, -1);
     }
-    res.setHeader('Content-disposition', 'attachment; filename=lpu_golazo_database_backup.json');
+    res.setHeader('Content-disposition', 'attachment; filename=lpu_golazo_backup.json');
     res.send(JSON.stringify(backupData, null, 2));
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

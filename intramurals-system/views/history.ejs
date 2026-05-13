@@ -62,5 +62,21 @@
             downloadLink.click();
         }
     </script>
+    <!-- Socket.io and SweetAlert Integration -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // 1. Real-Time Socket Logic
+        const socket = io();
+        socket.on('live_update', (message) => {
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500, timerProgressBar: true });
+            Toast.fire({ icon: 'info', title: 'Live Update', text: message }).then(() => window.location.reload());
+        });
+
+        // 2. URL Parameters Logic (SweetAlerts)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('error')) Swal.fire({ icon: 'error', title: 'Oops...', text: urlParams.get('error') });
+        if (urlParams.has('success')) Swal.fire({ icon: 'success', title: 'Success', text: urlParams.get('success'), timer: 2000, showConfirmButton: false });
+        window.history.replaceState({}, document.title, window.location.pathname);
+    </script>
 </body>
 </html>
