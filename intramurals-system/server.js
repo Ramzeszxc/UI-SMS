@@ -54,8 +54,6 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
     let userData = await redis.hgetall(`user:${req.body.username}`);
     
-    // --- THE ULTIMATE ADMIN OVERRIDE ---
-    // If the username is admin, force the role to 'admin' in both DB and memory
     if (req.body.username === 'admin') {
         await redis.hset('user:admin', 'role', 'admin');
         userData.role = 'admin'; 
@@ -75,7 +73,6 @@ app.post('/login', async (req, res) => {
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/login'); });
 app.get('/', (req, res) => res.redirect('/login'));
 
-// --- ADMIN ONLY: USER MANAGEMENT ---
 app.get('/users', requireAuth, requireRole(['admin']), async (req, res) => {
     const userKeys = await redis.keys('user:*');
     const staff = [];
@@ -93,7 +90,6 @@ app.post('/users/create', requireAuth, requireRole(['admin']), async (req, res) 
     res.redirect('/users?success=Staff Account Created');
 });
 
-// --- SHARED DASHBOARD ---
 app.get('/dashboard', requireAuth, requireRole(['admin', 'manager', 'faculty']), async (req, res) => {
     const stats = { totalTeams: (await redis.keys('team:*')).length, activeLoans: (await redis.keys('loan:*')).length };
     const leaderboardData = await redis.zrevrange('leaderboard:futsal', 0, -1, 'WITHSCORES');
@@ -110,7 +106,6 @@ app.post('/dashboard/announce', requireAuth, requireRole(['admin', 'manager']), 
     res.redirect('/dashboard?success=Announcement Posted');
 });
 
-// --- STUDENT ROUTES ---
 app.get('/student/dashboard', requireAuth, requireRole(['student']), async (req, res) => {
     const leaderboardData = await redis.zrevrange('leaderboard:futsal', 0, -1, 'WITHSCORES');
     const leaderboard = [];
@@ -138,18 +133,13 @@ app.post('/student/apply-team', requireAuth, requireRole(['student']), async (re
 });
 
 app.post('/student/edit-team', requireAuth, requireRole(['student']), async (req, res) => {
-    // Updates the database with the new name and players
     await redis.hset(`team:${req.body.teamId}`, 'name', req.body.name, 'players', req.body.players);
     
-    // Broadcasts the real-time update to the managers
     io.emit('live_update', '⚽ A student just updated their team roster!'); 
     
     res.redirect('/student/dashboard?success=Team roster updated successfully!');
 });
 
-// --- ADVANCED TEAMS MANAGEMENT ---
-// --- ADVANCED TEAMS MANAGEMENT ---
-// --- ADVANCED TEAMS MANAGEMENT ---
 app.get('/teams', requireAuth, requireRole(['admin', 'manager', 'faculty']), async (req, res) => {
     try {
         const searchQuery = req.query.search ? req.query.search.toLowerCase() : '';
